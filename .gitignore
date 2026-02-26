@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Local variable files
+*.tfvars
+*.tfvars.json
