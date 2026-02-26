@@ -8,6 +8,7 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
+
 resource "aws_vpc_security_group_ingress_rule" "http" {
   security_group_id = aws_security_group.alb_sg.id
   cidr_ipv4         = var.http_cidr
