@@ -3,6 +3,7 @@ resource "aws_db_subnet_group" "this" {
   subnet_ids = var.private_subnets
 }
 
+
 resource "aws_db_instance" "this" {
   identifier            = "outline-db"
   allocated_storage     = 20
