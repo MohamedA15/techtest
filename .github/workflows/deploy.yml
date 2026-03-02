@@ -1,0 +1,77 @@
+name: Build & Push Outline Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type "yes" to build & push image'
+        required: true
+        default: 'no'
+
+env:
+  AWS_REGION: eu-west-2
+  ECR_REPOSITORY: outline
+  ECR_REGISTRY: 688372068827.dkr.ecr.eu-west-2.amazonaws.com
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Confirm
+        if: ${{ github.event.inputs.confirmation != 'yes' }}
+        run: |
+          echo "Build cancelled."
+          exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      
+      - name: Show build context size
+        run: du -sh app/
+
+      - name: Set commit SHA
+        id: vars
+        run: echo "sha=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image (runtime stage only)
+        run: |
+          echo "Building image with tag: ${{ steps.vars.outputs.sha }}"
+          docker build \
+            --platform linux/amd64 \
+            --target runtime \
+            -f app/Dockerfile \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.vars.outputs.sha }} \
+            app/
+
+      - name: Show Docker Image Size
+        run: docker images $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+     
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+     
+      - name: Push to ECR
+        run: |
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.vars.outputs.sha }}
