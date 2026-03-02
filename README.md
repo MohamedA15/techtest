@@ -16,7 +16,7 @@
 ## Folder Structure
 
 ```text
-ECS-PROJECT/
+TECH-TEST/
 ├── app/
 │   ├── app/               
 │   ├── plugins/          
